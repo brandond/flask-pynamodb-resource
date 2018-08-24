@@ -1,0 +1,4 @@
+flask-restful
+pynamodb
+six
+ujson
