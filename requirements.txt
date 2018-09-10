@@ -1,4 +1,5 @@
 flask-restful
 pynamodb
+setuptools-version-command >= 2.2
 six
 ujson
