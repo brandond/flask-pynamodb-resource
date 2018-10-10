@@ -27,6 +27,11 @@ setup(
         'Topic :: Database :: Front-Ends',
     ],
     description='Presents PynamoDB models (DynamoDB tables) as Flask-RESTful resources',
+    extras_require={
+        'dev': [
+            'setuptools-version-command'
+        ]
+    },
     include_package_data=True,
     install_requires=requirements,
     long_description=readme,

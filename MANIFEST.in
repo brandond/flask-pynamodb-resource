@@ -1,4 +1,4 @@
-requirements.txt
-README.md
-README.rst
-LICENSE
+include requirements.txt
+include README.md
+include README.rst
+include LICENSE.txt
