@@ -1,7 +1,7 @@
 Flask PynamoDB Resource
 =======================
 [![PyPI version](https://badge.fury.io/py/flask-pynamodb-resource.svg)](https://badge.fury.io/py/flask-pynamodb-resource)
-[![Build Status](https://travis-ci.org/brandond/flask-pynamodb-resource.svg?branch=master)](https://travis-ci.org/brandond/flask-pynamodb-resource)
+[![Build Status](https://travis-ci.com/brandond/flask-pynamodb-resource.svg?branch=master)](https://travis-ci.com/brandond/flask-pynamodb-resource)
 
 Presents PynamoDB models (DynamoDB tables) as Flask-RESTful resources
 
