@@ -49,7 +49,10 @@ class IndexResource(Resource):
             else:
                 return [o.to_dict() for o in self.index.query(hash_key)]
         except self.index.Meta.model.DoesNotExist:
-            return ('', 404)
+            return ({'error': 'Record not found'}, 404)
+        except Exception as e:
+            logger.exception('Failed to get record')
+            return ({'error': e.message}, 500)
 
     def _get_hash(self, kwargs):
         """
@@ -137,7 +140,10 @@ class ModelResource(Resource):
             else:
                 return [o.to_dict() for o in self.model.scan(filter_condition=filters)]
         except self.model.DoesNotExist:
-            return ('', 404)
+            return ({'error': 'Record not found'}, 404)
+        except Exception as e:
+            logger.exception('Failed to get record')
+            return ({'error': e.message}, 500)
 
     def delete(self, *args, **kwargs):
         """
@@ -156,7 +162,11 @@ class ModelResource(Resource):
                     return ('', 204)
         except self.model.DoesNotExist:
             pass
-        return ('', 404)
+        except Exception as e:
+            logger.exception('Failed to delete record')
+            return ({'error': e.message}, 500)
+
+        return ({'error': 'Record not found'}, 404)
 
     def post(self, *args, **kwargs):
         """
@@ -176,15 +186,19 @@ class ModelResource(Resource):
             self.model(**data).save()
             return ('', 204)
         except (AttributeError, PutError) as e:
-            logger.error('Failed to save object', exc_info=True)
+            logger.exception('Failed to save record')
             return ({'error': e.message}, 400)
+        except Exception as e:
+            logger.exception('Failed to create record')
+            return ({'error': e.message}, 500)
 
     def put(self, *args, **kwargs):
         """
         Update an existing record. Handled same as POST, except parameters are required.
         """
         if not kwargs:
-            return('', 404)
+            return ({'error': 'Record not found'}, 404)
+
         return self.post()
 
     def _get_hash(self, kwargs):
@@ -229,7 +243,8 @@ def modelresource_factory(model):
     cls = type('{0}Resource'.format(model.__name__), (ModelResource,), {})
 
     cls.model = model
-    for name, attr in model._get_attributes().items():
+    get_attributes = getattr(model, 'get_attributes', model._get_attributes)
+    for name, attr in get_attributes().items():
         if attr.is_hash_key:
             cls.hash_keyname = name
         elif attr.is_range_key:
@@ -245,9 +260,10 @@ def indexresource_factory(index, name=None):
     cls = type('{0}Resource'.format(index.__class__.__name__), (IndexResource,), {})
 
     cls.index = index
+    get_attributes = getattr(index, 'get_attributes', index._get_attributes)
     if name:
         cls.name = name
-    for name, attr in index._get_attributes().items():
+    for name, attr in get_attributes().items():
         if attr.is_hash_key:
             cls.hash_keyname = name
         elif attr.is_range_key:
