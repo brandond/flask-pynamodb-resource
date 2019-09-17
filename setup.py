@@ -24,6 +24,7 @@ setup(
         'Programming Language :: Python :: 2.7',
         'Programming Language :: Python :: 3.5',
         'Programming Language :: Python :: 3.6',
+        'Programming Language :: Python :: 3.7',
         'Topic :: Database :: Front-Ends',
     ],
     description='Presents PynamoDB models (DynamoDB tables) as Flask-RESTful resources',
