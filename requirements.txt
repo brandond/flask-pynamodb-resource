@@ -1,4 +1,3 @@
-flask-restful
+flask-restplus
 pynamodb
 six
-ujson

@@ -3,12 +3,22 @@ Flask PynamoDB Resource
 [![PyPI version](https://badge.fury.io/py/flask-pynamodb-resource.svg)](https://badge.fury.io/py/flask-pynamodb-resource)
 [![Build Status](https://travis-ci.com/brandond/flask-pynamodb-resource.svg?branch=master)](https://travis-ci.com/brandond/flask-pynamodb-resource)
 
-Presents PynamoDB models (DynamoDB tables) as Flask-RESTful resources
+Presents PynamoDB models (DynamoDB tables) as Flask-RESTPlus resources.
+
+Release Notes
+-------------
+
+As of release 1.0.0, this module creates resources using Flask-RESTPlus instead of Flask-RESTful. If you register your models with a Flask App or Blueprint,
+you will find a Swagger UI and definition available at '/docs' and '/swagger.json'. If you register them with a Flask-RESTPlus API, they will simply be added
+to your existing API definition.
+
+This brings with it some changes to the serialization of a few contentious types such a date/datetime. Previously these were
+either a string or number, depending on what type you used in PynamoDB. Now they should be reliably serialized as a ISO8601 datetime string.
 
 Usage
 -----
 
-`flask_pynamodb_resource` provides factory methods to generate Flask-RESTful resources for PynamoDB Models and Indexes:
+`flask_pynamodb_resource` provides factory methods to generate Flask-RESTPlus resources for PynamoDB Models and Indexes:
 
     modelresource_factory(model)
         Create a resource class for the given model.
@@ -16,37 +26,7 @@ Usage
     indexresource_factory(index, name=None)
         Create a resource class for the given index.
 
-Example
+Examples
 -------
 
-```python
-from __future__ import print_function
-from flask import Flask
-from pynamodb.models import Model
-from pynamodb.attributes import UnicodeAttribute, NumberAttribute
-from flask_pynamodb_resource import modelresource_factory
-
-# Create a sample model
-class Thread(Model):
-    class Meta:
-        table_name = 'Thread'
-
-    forum_name = UnicodeAttribute(hash_key=True)
-    subject = UnicodeAttribute(range_key=True)
-    views = NumberAttribute(default=0)
-
-# Ensure tables exist before serving content
-def create_table(*args, **kwargs):
-    Thread.create_table(wait=True)
-
-# Set up Flask app
-app = Flask(__name__)
-app.before_first_request(create_table)
-
-# Register auto-generated routes for the model, under the '/api/v1/thread' prefix
-modelresource_factory(Thread).register(app, '/api/v1/thread')
-
-# Print rules
-for rule in app.url_map.iter_rules():
-    print('{} => {}'.format(rule.rule, rule.endpoint))
-```
+Several simple REST APIs based on PynamoDB example are available in the [examples](examples/) directory.
