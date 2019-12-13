@@ -49,6 +49,11 @@ class PynamoModel(ModelBase, dict, MutableMapping):
     if hasattr(attributes, 'LegacyBooleanAttribute'):
         TYPEMAP[attributes.LegacyBooleanAttribute] = fields.Boolean()
 
+    if hasattr(attributes, 'MapAttributeMeta'):
+        MAPMETA = attributes.MapAttributeMeta
+    else:
+        MAPMETA = attributes.AttributeContainerMeta
+
     def __init__(self, name, base, namespace, *args, **kwargs):
         super(PynamoModel, self).__init__(name=name, *args, **kwargs)
         self.name = name
@@ -103,7 +108,7 @@ class PynamoModel(ModelBase, dict, MutableMapping):
             else:
                 map_name = attr.__class__.__name__
             field = self._get_or_create_nested(map_name, attr, namespace)
-        elif isinstance(attr, attributes.MapAttributeMeta):
+        elif isinstance(attr, self.MAPMETA):
             field = self._get_or_create_nested(name, attr, namespace)
         elif isinstance(attr, attributes.ListAttribute):
             if attr.element_type:
