@@ -3,8 +3,8 @@ from collections import MutableMapping
 from inspect import isclass
 
 from flask import request
-from flask_restplus import Api, Namespace, Resource, fields, marshal
-from flask_restplus.model import ModelBase
+from flask_restx import Api, Namespace, Resource, fields, marshal
+from flask_restx.model import ModelBase
 from pynamodb import attributes, indexes
 from pynamodb.exceptions import PutError
 from six import string_types
@@ -34,7 +34,7 @@ class PynamoNumber(fields.Arbitrary):
 
 
 class PynamoModel(ModelBase, dict, MutableMapping):
-    """Abstraction layer to map PynamoDB model attributes to Flask-RESTPlus model fields"""
+    """Abstraction layer to map PynamoDB model attributes to Flask-RESTX model fields"""
 
     TYPEMAP = {
         attributes.BooleanAttribute: fields.Boolean(),
@@ -514,21 +514,21 @@ def modelresource_factory(*args, **kwargs):
 
 
 def monkeypatch_swagger():
-    import flask_restplus.model
-    import flask_restplus.api
-    import flask_restplus.swagger
+    import flask_restx.model
+    import flask_restx.api
+    import flask_restx.swagger
     # Swagger.register_model only registers fields for subclasses of Model,
     # but we need to get it to register fields for PynamoModel which
     # subclasses ModelBase directly. Hack that by replacing the Model reference
     # in the Swagger module with a tuple that also contains our class so that
     # isinstance(spec, Model) returns true for instances of our class.
-    flask_restplus.swagger.Model = (flask_restplus.model.Model, PynamoModel)
+    flask_restx.swagger.Model = (flask_restx.model.Model, PynamoModel)
     # The swagger generator replaces path parameter documentation specified
     # in the resource-level doc with implied types from the flask routes. This makes
     # it impossible to specify parameter info via route_doc. Hack around this
     # by turning path param extraction into a no-op.
-    flask_restplus.swagger.extract_path_params = lambda path: {}
-    flask_restplus.api.Swagger = flask_restplus.swagger.Swagger
+    flask_restx.swagger.extract_path_params = lambda path: {}
+    flask_restx.api.Swagger = flask_restx.swagger.Swagger
 
 
 __all__ = ['ModelResource', 'IndexResource', 'create_resource', 'modelresource_factory']
