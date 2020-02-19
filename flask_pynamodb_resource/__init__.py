@@ -231,7 +231,7 @@ class IndexResource(PynamoResource):
 
 class ModelResource(PynamoResource):
     """
-    Presents a PynamoDB model as a Flask-RESTful resource.
+    Presents a PynamoDB model as a Flask-RESTX resource.
     """
     @classmethod
     def register(cls, app, url_prefix=None):
