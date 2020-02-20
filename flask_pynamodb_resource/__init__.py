@@ -179,11 +179,11 @@ class IndexResource(PynamoResource):
 
         ns.add_resource(cls, '/{0}/'.format(cls.name),
                         route_doc={'description': '',
-                                   'params': {cls.hash_keyname: hash_param},
                                    'get': get_multi_doc,
                                    })
         ns.add_resource(cls, '/{0}/<{1}>'.format(cls.name, cls.hash_keyname),
                         route_doc={'description': '',
+                                   'params': {cls.hash_keyname: hash_param},
                                    'get': get_multi_doc
                                    })
         if cls.range_keyname:
