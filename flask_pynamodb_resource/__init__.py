@@ -208,7 +208,7 @@ class IndexResource(PynamoResource):
                 hash_key = self._get_hash(kwargs)
                 if self.range_keyname and self.range_keyname in kwargs:
                     range_key = self._get_range(kwargs)
-                    return [marshal(o, self.rest_model) for o in self.pynamo_model.query(hash_key, **range_key)]
+                    return [marshal(o, self.rest_model) for o in self.pynamo_model.query(hash_key, range_key)]
                 else:
                     return [marshal(o, self.rest_model) for o in self.pynamo_model.query(hash_key)]
             else:
@@ -231,7 +231,8 @@ class IndexResource(PynamoResource):
         deserialize to correct PynamoDB attribute type.
         """
         value = kwargs.pop(self.range_keyname)
-        return {self.range_keyname+'__eq': value}
+        attr = getattr(self.pynamo_model, self.range_keyname)
+        return (attr == value)
 
 
 class ModelResource(PynamoResource):
