@@ -33,6 +33,26 @@ class PynamoNumber(fields.Arbitrary):
             raise ValueError('Unsupported number format')
 
 
+class PynamoMapAttribute(fields.Raw):
+    """A wrapper to expose MapAttributes with no required properties as a Raw object"""
+    _name = ''
+
+    def __init__(self, name, **kwargs):
+        super(PynamoMapAttribute, self).__init__(cls_or_instance=fields.String, **kwargs)
+        self._name == name
+
+    def output(self, key, obj, ordered=False):
+        value = getattr(obj, key, None)
+        if isinstance(value, attributes.MapAttribute):
+            return value.attribute_values
+
+    def schema(self):
+        schema = super(PynamoMapAttribute, self).schema()
+        schema['type'] = 'object'
+        schema['additionalProperties'] = fields.String().__schema__
+        return schema
+
+
 class PynamoModel(ModelBase, dict, MutableMapping):
     """Abstraction layer to map PynamoDB model attributes to Flask-RESTX model fields"""
 
@@ -62,8 +82,7 @@ class PynamoModel(ModelBase, dict, MutableMapping):
         self._translate(base, namespace)
 
     def _translate(self, base, namespace):
-        get_attributes = getattr(base, 'get_attributes', base._get_attributes)
-        for name, attr in get_attributes().items():
+        for name, attr in get_attributes(base).items():
             self[name] = self._translate_attribute(name, attr, namespace)
             if attr.is_hash_key:
                 self.required.add(name)
@@ -72,16 +91,14 @@ class PynamoModel(ModelBase, dict, MutableMapping):
 
         # Add projected attributes for secondary indexes
         if isclass(base) and issubclass(base, indexes.Index):
-            get_attributes = getattr(base.Meta.model, 'get_attributes', base.Meta.model._get_attributes)
-
             if isinstance(base.Meta.projection, indexes.IncludeProjection):
                 project_keys = base.Meta.projection.non_key_attributes
             elif isinstance(base.Meta.projection, indexes.AllProjection):
-                project_keys = get_attributes().keys()
+                project_keys = get_attributes(base.Meta.model).keys()
             else:
                 return
 
-            for name, attr in get_attributes().items():
+            for name, attr in get_attributes(base.Meta.model).items():
                 if name in project_keys:
                     self[name] = self._translate_attribute(name, attr, namespace)
 
@@ -105,9 +122,10 @@ class PynamoModel(ModelBase, dict, MutableMapping):
         if isinstance(attr, attributes.MapAttribute):
             if attr.__class__ == attributes.MapAttribute:
                 map_name = name.title()
+                field = PynamoMapAttribute(map_name)
             else:
                 map_name = attr.__class__.__name__
-            field = self._get_or_create_nested(map_name, attr, namespace)
+                field = self._get_or_create_nested(map_name, attr, namespace)
         elif isinstance(attr, self.MAPMETA):
             field = self._get_or_create_nested(name, attr, namespace)
         elif isinstance(attr, attributes.ListAttribute):
@@ -215,7 +233,7 @@ class IndexResource(PynamoResource):
                 return [marshal(o, self.rest_model) for o in self.pynamo_model.scan()]
         except Exception as e:
             logger.exception('Failed to get record')
-            return ({'message': e.message}, 500)
+            return ({'message': str(e)}, 500)
 
     def _get_hash(self, kwargs):
         """
@@ -367,7 +385,7 @@ class ModelResource(PynamoResource):
             return ({'message': 'Record not found'}, 404)
         except Exception as e:
             logger.exception('Failed to get record')
-            return ({'message': e.message}, 500)
+            return ({'message': str(e)}, 500)
 
     def delete(self, *args, **kwargs):
         """
@@ -388,7 +406,7 @@ class ModelResource(PynamoResource):
             pass
         except Exception as e:
             logger.exception('Failed to delete record')
-            return ({'message': e.message}, 500)
+            return ({'message': str(e)}, 500)
 
         return ({'message': 'Record not found'}, 404)
 
@@ -407,6 +425,8 @@ class ModelResource(PynamoResource):
     def _save(self, create, *args, **kwargs):
         try:
             data = self._request_data()
+            if not isinstance(data, dict):
+                return ({'message': 'Invalid record type: {}'.format(data.__class__.__name__)}, 400)
 
             for k, v in kwargs.items():
                 if data[k] != v:
@@ -438,10 +458,10 @@ class ModelResource(PynamoResource):
                     return ({'message': 'Record not found'}, 404)
         except (AttributeError, PutError) as e:
             logger.exception('Invalid record')
-            return ({'message': e.message}, 400)
+            return ({'message': str(e)}, 400)
         except Exception as e:
             logger.exception('Failed to store record')
-            return ({'message': e.message}, 500)
+            return ({'message': str(e)}, 500)
 
     def _deserialize_dict(self, data, model):
         logger.info('Deserializing {} as {}'.format(data, model))
@@ -502,8 +522,7 @@ def create_resource(model_or_index, name=None):
 
     cls = type('{0}Resource'.format(model_or_index.__name__), (resource_class,), {'pynamo_model': model_or_index, 'name': name})
 
-    get_attributes = getattr(model_or_index, 'get_attributes', model_or_index._get_attributes)
-    for name, attr in get_attributes().items():
+    for name, attr in get_attributes(model_or_index).items():
         if attr.is_hash_key:
             cls.hash_keyname = name
         elif attr.is_range_key:
@@ -535,6 +554,14 @@ def monkeypatch_swagger():
     # by turning path param extraction into a no-op.
     flask_restx.swagger.extract_path_params = lambda path: {}
     flask_restx.api.Swagger = flask_restx.swagger.Swagger
+
+
+def get_attributes(model_or_index):
+    """
+    Legacy compatibility wrapper for Model.get_attributes() which was original a hidden method.
+    """
+    func = getattr(model_or_index, 'get_attributes', model_or_index._get_attributes)
+    return func()
 
 
 __all__ = ['ModelResource', 'IndexResource', 'create_resource', 'modelresource_factory']
