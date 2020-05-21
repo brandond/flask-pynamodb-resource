@@ -434,6 +434,12 @@ class ModelResource(PynamoResource):
 
             self._deserialize_dict(data, self.rest_model)
 
+            if '/' in data[self.hash_keyname]:
+                return ({'message': '\'{}\' may not contain forward slashes'.format(self.hash_keyname)}, 400)
+
+            if self.range_keyname and '/' in data[self.range_keyname]:
+                return ({'message': '\'{}\' may not contain forward slashes'.format(self.range_keyname)}, 400)
+
             try:
                 keys = [data[self.hash_keyname], data[self.range_keyname]] if self.range_keyname else [data[self.hash_keyname]]
                 attrs = [self.hash_keyname, self.range_keyname] if self.range_keyname else [self.hash_keyname]
